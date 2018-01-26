@@ -1,0 +1,168 @@
+<?php
+ 	require_once("Rest.inc.php");
+	
+	class API extends REST {
+	
+		public $data = "";
+
+		// php my admine baglanma
+		
+		const DB_SERVER = "localhost";
+		const DB_USER = "root";
+		const DB_PASSWORD = "a4644410";
+		const DB = "angularcode_customer";
+
+		private $db = NULL;
+		private $mysqli = NULL;
+		public function __construct(){
+			parent::__construct();				
+			$this->dbConnect();					
+		}
+		
+		/*
+		 *  database calıştırma işlemi
+		*/
+		private function dbConnect(){
+			$this->mysqli = new mysqli(self::DB_SERVER, self::DB_USER, self::DB_PASSWORD, self::DB);
+		}
+		
+		/*
+		 * metotu sorgu dizesine dayanıp dinamik olarak cagırıyoruz
+		 */
+		public function processApi(){
+			$func = strtolower(trim(str_replace("/","",$_REQUEST['x'])));
+			if((int)method_exists($this,$func) > 0)
+				$this->$func();
+			else
+				$this->response('',404); 
+		}
+				
+
+
+		 // crud işlemler 
+		
+
+		// listeleme işlemi (select)
+		private function customers(){	
+			if($this->get_request_method() != "GET"){
+				$this->response('',406);
+			}
+			$query="SELECT distinct c.customerNumber, c.customerName, c.email, c.address, c.city, c.state, c.postalCode, c.country FROM angularcode_customers c order by c.customerNumber desc";
+			$r = $this->mysqli->query($query) or die($this->mysqli->error.__LINE__);
+
+			if($r->num_rows > 0){
+				$result = array();
+				while($row = $r->fetch_assoc()){
+					$result[] = $row;
+				}
+				$this->response($this->json($result), 200); 
+			}
+			$this->response('',204);	
+		}
+		private function customer(){	
+			if($this->get_request_method() != "GET"){
+				$this->response('',406);
+			}
+			$id = (int)$this->_request['id'];
+			if($id > 0){	
+				$query="SELECT distinct c.customerNumber, c.customerName, c.email, c.address, c.city, c.state, c.postalCode, c.country FROM angularcode_customers c where c.customerNumber=$id";
+				$r = $this->mysqli->query($query) or die($this->mysqli->error.__LINE__);
+				if($r->num_rows > 0) {
+					$result = $r->fetch_assoc();	
+					$this->response($this->json($result), 200); 
+				}
+			}
+			$this->response('',204);	
+		}
+		
+
+		 //ekleme işlemi (insert) 
+		private function insertCustomer(){
+			if($this->get_request_method() != "POST"){
+				$this->response('',406);
+			}
+
+			$customer = json_decode(file_get_contents("php://input"),true);
+			$column_names = array('customerName', 'email', 'city', 'address', 'country');
+			$keys = array_keys($customer);
+			$columns = '';
+			$values = '';
+			foreach($column_names as $desired_key){ // boş bıralıkdıgında diziye boşluk ekliyoruz 
+
+			   if(!in_array($desired_key, $keys)) {
+			   		$$desired_key = '';
+				}else{
+					$$desired_key = $customer[$desired_key];
+				}
+				$columns = $columns.$desired_key.',';
+				$values = $values."'".$$desired_key."',";
+			}
+			$query = "INSERT INTO angularcode_customers(".trim($columns,',').") VALUES(".trim($values,',').")";
+			if(!empty($customer)){
+				$r = $this->mysqli->query($query) or die($this->mysqli->error.__LINE__);
+				$success = array('status' => "Success", "msg" => "Customer Created Successfully.", "data" => $customer);
+				$this->response($this->json($success),200);
+			}else
+				$this->response('',204);	
+		}
+
+		// guncelleme işlemi (update)
+		private function updateCustomer(){
+			if($this->get_request_method() != "POST"){
+				$this->response('',406);
+			}
+			$customer = json_decode(file_get_contents("php://input"),true);
+			$id = (int)$customer['id'];
+			$column_names = array('customerName', 'email', 'city', 'address', 'country');
+			$keys = array_keys($customer['customer']);
+			$columns = '';
+			$values = '';
+			foreach($column_names as $desired_key){ // muüteri  konturol edip yoksa boşluk ekliyoruz
+
+			   if(!in_array($desired_key, $keys)) {
+			   		$$desired_key = '';
+				}else{
+					$$desired_key = $customer['customer'][$desired_key];
+				}
+				$columns = $columns.$desired_key."='".$$desired_key."',";
+			}
+			$query = "UPDATE angularcode_customers SET ".trim($columns,',')." WHERE customerNumber=$id";
+			if(!empty($customer)){
+				$r = $this->mysqli->query($query) or die($this->mysqli->error.__LINE__);
+				$success = array('status' => "Success", "msg" => "Customer ".$id." Updated Successfully.", "data" => $customer);
+				$this->response($this->json($success),200);
+			}else
+				$this->response('',204);	
+		}
+		
+
+		//silme işlemi (delete)
+		private function deleteCustomer(){
+			if($this->get_request_method() != "DELETE"){
+				$this->response('',406);
+			}
+			$id = (int)$this->_request['id'];
+			if($id > 0){				
+				$query="DELETE FROM angularcode_customers WHERE customerNumber = $id";
+				$r = $this->mysqli->query($query) or die($this->mysqli->error.__LINE__);
+				$success = array('status' => "Success", "msg" => "Successfully deleted one record.");
+				$this->response($this->json($success),200);
+			}else
+				$this->response('',204);	// kayıt yok 
+		}
+		
+		/*
+		 *	diziyi json paketliyoruz
+		*/
+		private function json($data){
+			if(is_array($data)){
+				return json_encode($data);
+			}
+		}
+	}
+	
+	// Kutuphane ekleme işlemi  api process 
+	
+	$api = new API;
+	$api->processApi();
+?>

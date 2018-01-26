@@ -1,0 +1,25 @@
+﻿  .form-horizontal input.ng-invalid.ng-dirty {
+    border-color: #FA787E;
+  }
+
+  .form-horizontal input.ng-valid.ng-dirty {
+    border-color: #78FA89;
+  }
+</style>
+
+<div class="view">
+    <div class="container">
+        <div class="row">
+    
+        <header>
+            <h3>{{title}}</h3>
+        </header>
+        <div class="col-md-12">
+
+<form role="form" name="myForm" class="form-horizontal">
+<div class="row">
+<div class= "form-group" ng-class="{error: myForm.name.$invalid}">
+    <label class= "col-md-2"> ss </label>
+    <div class="col-md-4">
+    <input name="name" ng-model="customer.customerName" type= "text" class= "form-control" placeholder="Your name" required/>
+
